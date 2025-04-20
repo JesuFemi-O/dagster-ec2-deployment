@@ -1,0 +1,62 @@
+name: Deploy Code Location - ingestion_svc
+
+on:
+  push:
+    paths:
+      - 'code-locations/data-ingestion/**'
+      - '.github/workflows/code-location-deploy.yml'
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ingestion_svc
+  IMAGE_TAG: jayefee/ingestion_svc:latest
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🔐 Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🛠️ Build and push ingestion_svc image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./code-locations/data-ingestion
+          file: ./code-locations/data-ingestion/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_TAG }}
+          platforms: linux/amd64
+
+      - name: ✍🏽 Generate .env file
+        run: |
+          echo "DAGSTER_POSTGRES_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DAGSTER_POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DAGSTER_POSTGRES_DB=${{ secrets.DB_NAME }}" >> .env
+          echo "DAGSTER_CURRENT_IMAGE=${{ env.IMAGE_TAG }}" >> .env
+
+      - name: 💻 Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 📦 Copy files to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no docker-compose.yml .env ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/dagster-deploy/
+
+      - name: 🚀 SSH and deploy on EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            cd dagster-deploy
+            docker compose pull ingestion_svc
+            docker compose up -d ingestion_svc
+          EOF
