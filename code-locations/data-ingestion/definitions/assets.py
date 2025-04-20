@@ -15,3 +15,8 @@ def simple_asset():
     print("✅ simple_asset completed.")
     return "simple_asset"
 
+
+@asset(deps=[simple_asset])
+def another_simple_asset():
+    print("✅ another_simple_asset completed.")
+    return "another_simple_asset"
