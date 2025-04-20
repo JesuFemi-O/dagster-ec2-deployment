@@ -9,7 +9,7 @@ run_coordinator:
 storage:
   postgres:
     postgres_db:
-      hostname: host.docker.internal
+      hostname: postgres
       username:
         env: DAGSTER_POSTGRES_USER
       password:
