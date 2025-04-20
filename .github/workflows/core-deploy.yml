@@ -59,6 +59,10 @@ jobs:
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             cd dagster-deploy
+
+            # Ensure the Docker network exists
+            docker network inspect dagster-poc-network >/dev/null 2>&1 || docker network create dagster-poc-network
+            
             docker compose pull dagster_webserver dagster_daemon
             docker compose up -d dagster_webserver dagster_daemon
           EOF
