@@ -55,10 +55,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: 📦 Copy docker-compose + .env to EC2
-        run: |
-          scp -o StrictHostKeyChecking=no docker-compose.yml .env ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/dagster-deploy/
-
       - name: 🚀 SSH and deploy on EC2
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
