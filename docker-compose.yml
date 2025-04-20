@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: dagster-poc-postgres
+    environment:
+      POSTGRES_USER: ${DAGSTER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DAGSTER_POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    networks:
+      - dagster-poc-network
+    restart: unless-stopped
+
+  ingestion_svc:
+    image: ${DAGSTER_CURRENT_IMAGE}
+    container_name: ingestion_svc
+    environment:
+      DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB}
+      DAGSTER_CURRENT_IMAGE: ${DAGSTER_CURRENT_IMAGE}
+    ports:
+      - "4000:4000"
+    networks:
+      - dagster-poc-network
+    depends_on:
+      - postgres
+
+  dagster_webserver:
+    image: jayefee/dagster_webserver:latest
+    container_name: dagster_webserver
+    environment:
+      DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB}
+      DAGSTER_CURRENT_IMAGE: ${DAGSTER_CURRENT_IMAGE}
+    ports:
+      - "3000:3000"
+    networks:
+      - dagster-poc-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w workspace.yaml
+    depends_on:
+      - postgres
+      - ingestion_svc
+
+  dagster_daemon:
+    image: jayefee/dagster_daemon:latest
+    container_name: dagster_daemon
+    environment:
+      DAGSTER_POSTGRES_USER: ${DAGSTER_POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${DAGSTER_POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${DAGSTER_POSTGRES_DB}
+      DAGSTER_CURRENT_IMAGE: ${DAGSTER_CURRENT_IMAGE}
+    networks:
+      - dagster-poc-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: dagster-daemon run
+    depends_on:
+      - dagster_webserver
+
+networks:
+  dagster-poc-network:
+    driver: bridge
