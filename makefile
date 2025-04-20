@@ -3,9 +3,18 @@ IMAGE_NS ?= yourdockerhubuser
 INGESTION_IMAGE ?= $(IMAGE_NS)/ingestion_svc:latest
 WEB_IMAGE ?= $(IMAGE_NS)/dagster_webserver:latest
 DAEMON_IMAGE ?= $(IMAGE_NS)/dagster_daemon:latest
+NETWORK_NAME=dagster-poc-network
 
 # Local dev
-up:
+network:
+	@echo "🔌 Ensuring Docker network exists: $(NETWORK_NAME)"
+	@if ! docker network ls --format '{{.Name}}' | grep -q "^$(NETWORK_NAME)$$"; then \
+		docker network create $(NETWORK_NAME); \
+		echo "✅ Network $(NETWORK_NAME) created."; \
+	else \
+		echo "✅ Network $(NETWORK_NAME) already exists."; \
+	fi
+up: network
 	docker compose up -d
 
 down:
