@@ -3,7 +3,7 @@ import time
 
 logger = get_dagster_logger()
 
-@asset
+@asset(group_name="elt", compute_kind="python")
 def long_running_asset():
     for i in range(12):
         logger.info(f"Running batch {i+1}/12...")
@@ -12,13 +12,13 @@ def long_running_asset():
     logger.info("✅ long_running_asset completed.")
 
 
-@asset
+@asset(group_name="elt", compute_kind="python")
 def simple_asset():
     logger.info("✅ simple_asset completed.")
     return "simple_asset"
 
 
-@asset(deps=[simple_asset])
+@asset(group_name="elt", compute_kind="python", deps=[simple_asset])
 def another_simple_asset():
     logger.info("✅ another_simple_asset completed.")
     return "another_simple_asset"
